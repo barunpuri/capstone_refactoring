@@ -28,16 +28,8 @@ def make_popup_image(mode):
 
 
     photo = PhotoImage()
-    if( mode == 0 ): 
-        photo = PhotoImage(file = 'img/click.png')
-    elif( mode == 1 ):
-        photo = PhotoImage(file = 'img/left.png')
-    elif( mode == 2 ):
-        photo = PhotoImage(file = 'img/right.png')
-    elif( mode == 3 ):
-        photo = PhotoImage(file = 'img/locked.png')
-    elif( mode == 4 ):
-        photo = PhotoImage(file = 'img/unlocked.png')
+    img_files = ['img/click.png', 'img/left.png', 'img/right.png', 'img/locked.png', 'img/unlocked.png']
+    photo = PhotoImage(file = img_files[mode])
         
     label = Label(root, image=photo)
     label.pack()
