@@ -20,26 +20,26 @@ DROP TABLE IF EXISTS conn_info;
 -------------------------------------------
 -- Schema
 -------------------------------------------
-CREATE TABLE user_info (
-    Id      CHAR(15)    NOT NULL,
-    Pw      CHAR(15)    NOT NULL,
-    Name    CHAR(10)    NOT NULL,
-    Email   CHAR(30)    NOT NULL,
+CREATE TABLE USER_INFO (
+    USER_ID     CHAR(15)    NOT NULL,
+    PASSWORD    CHAR(15)    NOT NULL,
+    NAME        CHAR(10)    NOT NULL,
+    EMAIL       CHAR(30)    NOT NULL,
 
-    PRIMARY KEY (Id),
-    INDEX   idx_id      (Id ASC)
+    PRIMARY KEY (USER_ID),
+    INDEX   IDX_USER_ID      (USER_ID ASC)
 );
 
-CREATE TABLE conn_info (
-    Id          CHAR(15)    NOT NULL,
-    MacAddr     CHAR(17)    NOT NULL,
-    DeviceName  CHAR(100)    NOT NULL,
+CREATE TABLE CONN_INFO (
+    DEVICE_ID   CHAR(15)    NOT NULL,
+    MAC_ADDR    CHAR(17)    NOT NULL,
+    DEVICE_NAME CHAR(100)   NOT NULL,
 
-    PRIMARY KEY     (Id, MacAddr),
-    INDEX   idx_id      (Id ASC),
-    INDEX   idx_Mac     (MacAddr ASC),
+    PRIMARY KEY (DEVICE_ID, MAC_ADDR),
+    INDEX   IDX_DEVICE_ID   (ID ASC),
+    INDEX   IDX_MAC_ADDR    (MAC_ADDR ASC),
 
-    CONSTRAINT      fk_user_conn    FOREIGN KEY (Id)    REFERENCES user_info(Id)
+    CONSTRAINT  FK_USER_CONN    FOREIGN KEY (DEVICE_ID)    REFERENCES USER_INFO(USER_ID)
                                         ON DELETE CASCADE
                                         ON UPDATE CASCADE
 );
@@ -48,12 +48,12 @@ CREATE TABLE conn_info (
 -- Data
 -------------------------------------------
 
-INSERT INTO user_info VALUES
+INSERT INTO USER_INFO VALUES
 ('test', 'test', 'test', 'test@mail.com'),
 ('test2', 'test', 'test', 'test@mail.com'),
 ('test3', 'test', 'test', 'test@mail.com');
 
-INSERT INTO conn_info VALUES
+INSERT INTO CONN_INFO VALUES
 ('test', 'ff:ff:ff:ff:ff:ff', 'test'),
 ('test', 'ff:ff:ff:ff:ff:ee', 'test_pc'),
 ('test2', 'ff:ff:ff:ff:ff:ff', 'test'),
