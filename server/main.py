@@ -80,7 +80,21 @@ def make_connection(sock):
     except:
         pass
     # conn_info["id" | "did"]
-        
+
+def generate_pw(sock, mode):
+
+    conn_mode = {'init':0, 'conn':1}
+
+    pw = f'0000'
+    lock.acquire()
+    while(pw == '0000' or connected_com.get(pw,0) != 0 ):
+        pw = f'{random.randrange(1, 10**4):04}'
+    
+    connected_com[pw] = sock
+    connected_mob[pw] = conn_mode[mode]
+    lock.release()     
+
+    return pw
 
 def dist(sock):
     while True:
@@ -90,15 +104,7 @@ def dist(sock):
 
         if( recvData == 'com' ): # from com 
 
-            pw = f'0000'
-            while(pw == '0000' or connected_com.get(pw,0) != 0 ):
-                pw = f'{random.randrange(1, 10**4):04}'
-
-            lock.acquire()
-            connected_com[pw] = sock
-            connected_mob[pw] = 0
-            lock.release()
-
+            pw = generate_pw(sock, 'init')
             sandData = pw.encode('utf-8')
             sock.send(sandData)
             break
@@ -134,11 +140,12 @@ def dist(sock):
                     sock.send('fail'.encode('utf-8'))
                     continue
 
+
             else: # pc
                 sql = 'select count(*) from user_info where id = "{}" and pw = "{}";'.format(login_info["id"], login_info["pw"])
-
                 curs.execute(sql)
                 rows = curs.fetchall()
+                
                 if(rows[0][0] == 0):
                     sock.send('fail'.encode('utf-8'))
                     break
@@ -147,20 +154,10 @@ def dist(sock):
                 try:
                     curs.execute(sql)
                     rows = curs.fetchall()
-
                 except:
                     pass
 
-                pw = f'0000'
-                while(pw == '0000' or connected_com.get(pw,0) != 0 ):
-                    pw = f'{random.randrange(1, 10**4):04}'
-
-                lock.acquire()
-                connected_com[pw] = sock
-                connected_mob[pw] = 1
-                connected_dev[login_info["id"], login_info["did"]] = pw
-                lock.release()
-                
+                connected_dev[login_info["id"], login_info["did"]] = generate_pw(sock, 'conn')
                 sock.send('ok'.encode('utf-8'))
 
             print("login end")
