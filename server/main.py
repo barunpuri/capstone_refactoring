@@ -32,11 +32,11 @@ def receive(connection_id):
     target_sock = connected_com[connection_id]
     while True:
         try:
-            recvData = source_sock.recv(1024)#check source alive
-            if not recvData:    
+            recv_data = source_sock.recv(1024)#check source alive
+            if not recv_data:    
                 source_sock.close()
                 break
-            target_sock.send(recvData)
+            target_sock.send(recv_data)
         except:
             target_sock.send('disconnected with other device'.encode('utf-8'))
             break
@@ -50,8 +50,8 @@ def check(connection_id):
 
     try:
         while True:
-            recvData = target_sock.recv(1024) # check target alive
-            if not recvData:
+            recv_data = target_sock.recv(1024) # check target alive
+            if not recv_data:
                 lock.acquire()
                 del connected_com[connection_id]
                 del connected_mob[connection_id]
@@ -72,8 +72,8 @@ def check(connection_id):
 
 def make_connection(sock):
     try: 
-        recvData = sock.recv(1024).decode('utf-8')
-        conn_info = json.loads(recvData)
+        recv_data = sock.recv(1024).decode('utf-8')
+        conn_info = json.loads(recv_data)
 
         pw = connected_dev[conn_info["id"], conn_info["did"]]
         sock.send(pw.encode('utf-8'))
@@ -96,82 +96,116 @@ def generate_pw(sock, mode):
 
     return pw
 
+def login(login_info, sock):
+    sql = 'select count(*) from user_info where id = "{}" and pw = "{}";'.format(login_info["id"], login_info["pw"])
+    curs.execute(sql)
+    rows = curs.fetchall()
+
+    if(rows[0][0] == 0): # count = 0
+        return 'fail'.encode('utf-8')
+
+    #if mobile
+    if(login_info.get("did",0) == 0 ): 
+        sql = 'select deviceName from conn_info where id = "{}";'.format(login_info["id"])
+        curs.execute(sql)
+        rows = curs.fetchall()
+        conn_list = ''
+        for r in rows: 
+            if( connected_dev.get((login_info["id"],r[0]), 0) != 0 ):
+                conn_list += r[0] + ','
+
+        if(conn_list ==''): 
+            conn_list = 'empty'
+        
+        conn = threading.Thread(target=make_connection, args=(sock,))
+        conn.start()
+
+        return conn_list.encode('utf-8')
+
+    #if pc
+    else:
+        sql = 'insert conn_info(id, macAddr, DeviceName) values ("{}", "{}", "{}");'.format(login_info["id"], login_info["mac"], login_info["did"])
+        try:
+            curs.execute(sql)
+            rows = curs.fetchall()
+        except:
+            pass
+
+        connected_dev[login_info["id"], login_info["did"]] = generate_pw(sock, 'conn')
+        return 'ok'.encode('utf-8')
+
+    #print("login end")
+    return 
+
+def connect_w_pc(sock):
+    pw = generate_pw(sock, 'init')
+    sandData = pw.encode('utf-8')
+    sock.send(sandData)
+    return
+
+def connect_w_mob(recv_data, sock):
+    try:    
+        if(connected_mob[recv_data] == 0):
+            send_data = 'Connected'.encode('utf-8')
+            sock.send(send_data)
+            lock.acquire()
+            connected_mob[recv_data] = 1
+            lock.release()
+            time.sleep(10)
+
+        else: #connected_mob = 1
+            send_data = 'Connected'.encode('utf-8')
+            connected_com[recv_data].send(send_data)
+            sock.send(send_data)
+
+            lock.acquire()
+            connected_mob[recv_data] = sock
+            lock.release()
+
+            checking = threading.Thread(target=check, args=(recv_data,))
+            checking.start()            
+
+    except KeyError:
+        send_data = 'Invalid Password'
+        sock.send(send_data.encode('utf-8'))
+
+    except OSError: 
+        send_data = 'Invalid Password'
+        sock.send(send_data.encode('utf-8'))
+        lock.acquire()
+        del connected_mob[recv_data]
+        del connected_com[recv_data]
+        lock.release()
+    return
+
 def dist(sock):
     while True:
-        recvData = sock.recv(1024).decode('utf-8')
-        if(recvData == ''): break
-        print("flag: {}".format(recvData))
+        recv_data = sock.recv(1024).decode('utf-8')
+        if(recv_data == ''): break
+        print("flag: {}".format(recv_data))
 
-        if( recvData == 'com' ): # from com 
+        if( recv_data == 'com' ): # from com 
+            connect_w_pc(sock)
+            
 
-            pw = generate_pw(sock, 'init')
-            sandData = pw.encode('utf-8')
-            sock.send(sandData)
-            break
+        elif( recv_data == 'login' ):
+            recv_data = sock.recv(1024).decode('utf-8')
+            login_info = json.loads(recv_data)
+            print("login {}".format(recv_data))
 
-
-        elif( recvData == 'login' ):
-            recvData = sock.recv(1024).decode('utf-8')
-            login_info = json.loads(recvData)
-            print("login {}".format(recvData))
-            # db에서 정보 확인
-
-            if(login_info.get("did",0) == 0 ): #phone
-                sql = 'select count(*) from user_info where id = "{}" and pw = "{}";'.format(login_info["id"], login_info["pw"])
-
-                curs.execute(sql)
-                rows = curs.fetchall()
-                if(rows[0][0] == 1):
-                    sql = 'select deviceName from conn_info where id = "{}";'.format(login_info["id"])
-                    curs.execute(sql)
-                    rows = curs.fetchall()
-                    conn_list = ''
-                    for r in rows: 
-                        if( connected_dev.get((login_info["id"],r[0]), 0) != 0 ):
-                            conn_list += r[0] + ','
-
-                    if(conn_list ==''): conn_list = 'empty'
-                    sock.send(conn_list.encode('utf-8'))
-                    
-                    conn = threading.Thread(target=make_connection, args=(sock,))
-                    conn.start()
-
-                else : 
-                    sock.send('fail'.encode('utf-8'))
-                    continue
+            response = login(login_info, sock)
+            sock.send(response)
 
 
-            else: # pc
-                sql = 'select count(*) from user_info where id = "{}" and pw = "{}";'.format(login_info["id"], login_info["pw"])
-                curs.execute(sql)
-                rows = curs.fetchall()
-                
-                if(rows[0][0] == 0):
-                    sock.send('fail'.encode('utf-8'))
-                    break
-                
-                sql = 'insert conn_info(id, macAddr, DeviceName) values ("{}", "{}", "{}");'.format(login_info["id"], login_info["mac"], login_info["did"])
-                try:
-                    curs.execute(sql)
-                    rows = curs.fetchall()
-                except:
-                    pass
-
-                connected_dev[login_info["id"], login_info["did"]] = generate_pw(sock, 'conn')
-                sock.send('ok'.encode('utf-8'))
-
-            print("login end")
-            break
-
-        elif( recvData == 'signup'):
-            recvData = sock.recv(1024).decode('utf-8')
-            print("signup {}",format(recvData))
-            signup_info = json.loads(recvData)  #id, pw, name, email
+        elif( recv_data == 'signup'):
+            recv_data = sock.recv(1024).decode('utf-8')
+            print("signup {}",format(recv_data))
+            signup_info = json.loads(recv_data)  #id, pw, name, email
             print(signup_info)
             sql = 'insert user_info(id, pw, name, email) values ("{}", "{}", "{}", "{}");'.format(signup_info["id"], signup_info["pw"], signup_info["name"], signup_info["email"])
             try:
                 curs.execute(sql)
-                rows = curs.fetchall()
+                curs.fetchall()
                 sock.send('ok'.encode('utf-8'))
             except :
                 sock.send('fail'.encode('utf-8'))
@@ -182,46 +216,12 @@ def dist(sock):
 
 
         else : # from mobile, data : password 
-            try:    
-                if(connected_mob[recvData] == 0):
-                    sendData = 'Connected'.encode('utf-8')
-                    sock.send(sendData)
-                    lock.acquire()
-                    connected_mob[recvData] = 1
-                    lock.release()
-                    time.sleep(10)
-                    break
-
-                else:
-                    sendData = 'Connected'.encode('utf-8')
-                    connected_com[recvData].send(sendData)
-                    sock.send(sendData)
-
-                    lock.acquire()
-                    connected_mob[recvData] = sock
-                    lock.release()
-
-                    checking = threading.Thread(target=check, args=(recvData,))
-                    checking.start()
-                    break 
-
-            except KeyError:
-                sendData = 'Invalid Password'
-                sock.send(sendData.encode('utf-8'))
-
-            except OSError: 
-                sendData = 'Invalid Password'
-                sock.send(sendData.encode('utf-8'))
-                lock.acquire()
-                del connected_mob[recvData]
-                del connected_com[recvData]
-                lock.release()
-            break
+            connect_w_mob(recv_data, sock)
 
 #mysql 5.7.22 
 
 # MySQL Connection 연결
-db_conn = pymysql.connect(host='database-1.clechpc6fvlz.us-east-1.rds.amazonaws.com', 
+db_conn = pymysql.connect(host='database-1.cgi3kozgpark.ap-northeast-2.rds.amazonaws.com', 
 port = 3306, user='admin', password='puri142857', db='capstone', charset='utf8',autocommit=True)
 
 # # Connection 으로부터 Cursor 생성
