@@ -26,7 +26,6 @@ def make_popup_image(mode):
     root.wm_attributes("-topmost", 1)
     root.geometry("{}x{}+{}+{}".format(SIZE, SIZE, int((WIDTH-SIZE)/2), int((HEIGHT-SIZE)/2)) )
 
-
     photo = PhotoImage()
     img_files = ['img/click.png', 'img/left.png', 'img/right.png', 'img/locked.png', 'img/unlocked.png']
     photo = PhotoImage(file = img_files[mode])
@@ -42,7 +41,6 @@ def point_on_screen(recvData):
         mode, x_ratio, y_ratio = recvData.split(',')
         # mode 0 = click, 1 = left, 2 = right, 3 = lock, 4 = unlock 
 
-        
         point_x = WIDTH * float(x_ratio)
         point_y = HEIGHT * float(y_ratio)
 
@@ -65,14 +63,12 @@ def point_on_screen(recvData):
     except:
         pass
 
-
 def make_connection(id):
     port = 8081
 
     clientSock = socket(AF_INET, SOCK_STREAM)
     #clientSock.connect(('127.0.0.1', port))
     clientSock.connect(('13.125.89.118', port))
-    
 
     print('접속 완료')
 
@@ -92,11 +88,6 @@ def make_connection(id):
         
         return clientSock
     
-        
-
-        
-
-
 def pointing_start(sock):
     # 좌표값 
     recvData = ''
@@ -139,7 +130,6 @@ def notify():
         toaster = ToastNotifier()
         toaster.show_toast("Touch On Screen", "Program is running in System Tray~", icon_path="img/Logo.ico", duration=4, threaded=True)
 
-
 class MainForm(QtWidgets.QDialog):
     def __init__(self, parent=None):
         self.closed = 0
@@ -162,7 +152,6 @@ class MainForm(QtWidgets.QDialog):
         #self.close()
     # No:  Do nothing.
 
-
     @pyqtSlot()
     def generate_num(self): # btn 
         #self.ui.pw_show.setText("1234")
@@ -175,11 +164,9 @@ class MainForm(QtWidgets.QDialog):
         waiting = threading.Thread(target=connectionStart, args=(sock,self))
         waiting.start()
 
-
     @pyqtSlot()
     def how_to(self): #btn
         webbrowser.open("https://github.com/kookmin-sw/capstone-2020-9")
-
 
     @pyqtSlot()
     def login(self): #btn
@@ -201,7 +188,6 @@ class MainForm(QtWidgets.QDialog):
             # self.showNormal will restore the window even if it was
             # minimized.
             self.show()
-
 
 class LoginForm(QtWidgets.QDialog):
     def __init__(self, parent=None):
@@ -242,7 +228,6 @@ class LoginForm(QtWidgets.QDialog):
         else:
             self.ui.result.setText("올바르지 않은 ID, PW 입니다.")
             
-
     @pyqtSlot()
     def make_account(self):
         signup_window.move(self.x(), self.y())
@@ -256,7 +241,6 @@ class LoginForm(QtWidgets.QDialog):
         main_window.show()
         self.__init__()
         
-
 class SignUpForm(QtWidgets.QDialog):
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
@@ -305,7 +289,6 @@ class SignUpForm(QtWidgets.QDialog):
         else:
             self.ui.result.setText("이미 존재하는 ID 입니다.")
             
-    
 class SystemTrayIcon(QtWidgets.QSystemTrayIcon):
 
     def __init__(self, icon, parent=None):
@@ -321,10 +304,6 @@ class SystemTrayIcon(QtWidgets.QSystemTrayIcon):
         exitAction.triggered.connect(app.quit)
         
         self.setContextMenu(menu)
-
-
-        
-
 
 #fixed size = 365 305        
 if __name__ == '__main__':
