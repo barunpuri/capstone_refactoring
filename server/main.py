@@ -164,6 +164,8 @@ def connect_w_mob(recv_data, sock): # from ~
             checking = threading.Thread(target=check_alive, args=(recv_data,))
             checking.start()       
 
+            return "connected_by_pw"
+        return ''
     except KeyError:
         send_data = 'Invalid Password'
         sock.send(send_data.encode('utf-8'))
@@ -203,11 +205,14 @@ def dist(sock):
             break
 
         else : # from mobile, data : password 
-            connect_w_mob(recv_data, sock)
+            phase = connect_w_mob(recv_data, sock)
+            if(phase == 'connected_by_pw'):
+                break
 
 #중복 처리 어떻게? duplicated id 검사 
 # return 친절... 해야된다! 
 # log라도 친절하게 찍기 
+
 
 def add_user(signup_info):
     ## 여러 실패 케이스르 만들어서 어떤 error를 뿌리는지 확인 
@@ -247,6 +252,7 @@ random.seed(time.time())
 lock = threading.Lock()
 
 connected_com = dict()
+connected_com[f'0000'] = -1
 connected_dev = dict()
 connected_mob = dict()
 
