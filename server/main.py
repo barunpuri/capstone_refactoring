@@ -40,6 +40,11 @@ def receive(connection_id):
         except OSError: 
             target_sock.send('disconnected with other device'.encode('utf-8'))
             break
+        # os error 말고 다른 error 발생 가능? 
+        # 있으면 남기기 
+        # oserror -> 아는 error 는 warning
+        # 모르는 error : error로 처리 (5단계)
+        #except 의 종류, 메세지 신경써서 남기기 
 
 def check_alive(connection_id):
     source_sock = connected_mob[connection_id]
@@ -86,23 +91,23 @@ def generate_pw(sock, mode):
 
     return pw
 
-def check_login_info(login_info):
+def check_login_info(login_info): #에러 나면 어떻게해? => db 쓰는쪽 다 처리 하기 에러 ! 
     sql = 'select count(*) from user_info where id = "{}" and pw = "{}";'.format(login_info["id"], login_info["pw"])
     curs.execute(sql)
-    rows = curs.fetchall()
+    rows = curs.fetchall() # [0][0] 을 붙이고 rows의 이름을 바꾸기 
     return rows[0][0]!=0
 
 def make_device_list(login_info):
-    sql = 'select deviceName from conn_info where id = "{}";'.format(login_info["id"])
+    sql = 'select deviceName from conn_info where id = "{}";'.format(login_info["id"]) # caching.... 되도록 (알아보기)
     curs.execute(sql)
     rows = curs.fetchall()
     conn_list = ''
     for r in rows: 
-        if(connected_dev.get((login_info["id"], r[0]), 0) != 0):
-            conn_list += r[0] + ','
+        if(connected_dev.get((login_info["id"], r[0]), 0) != 0): #=> 지금 가지고 있는 애들을 주고 살아 있는 애들만 가져와야 함 
+            conn_list += r[0] + ','     # db 찾아보면 해결 할수도? 
 
-    if(conn_list ==''): 
-        conn_list = 'empty'
+    if(conn_list ==''): # not conn_list 
+        conn_list = 'empty' #mobile에 empty로 전달... => error code(숫자)로 주는것이 바람직 
     
     return conn_list
 
@@ -115,7 +120,7 @@ def add_pc(login_info):
         print(m)
 
 def login(login_info, sock):
-    is_exist = check_login_info(login_info)
+    is_exist = check_login_info(login_info) #is_exist 없애고 check_login_info의 이름 바꾸기 
 
     if(not is_exist): 
         sock.send('fail'.encode('utf-8'))
@@ -123,8 +128,8 @@ def login(login_info, sock):
 
     response_message = ''
     #if mobile
-    is_mobile = login_info.get("did", 0) == 0
-    if(is_mobile):  
+    is_mobile = login_info.get("did", 0) == 0 # device type == mobile? 
+    if(is_mobile):                              #login info.devicetype으로 가져다 쓸수 있도록... 
         response_message = make_device_list(login_info)
         conn = threading.Thread(target=make_connection, args=(sock, ))
         conn.start()
@@ -141,17 +146,17 @@ def connect_w_pc(sock):
     sock.send(sandData)
     return
 
-def mobile_connect(pw, data): ## data = 0 :init | 1 : touch | sock : conn
+def mobile_connect(pw, data): ## data = 0 :init | 1 : touch | sock : conn # 동사로 시작 
     lock.acquire()
     connected_mob[pw] = data
     lock.release()
 
-def connect_w_mob(recv_data, sock):
+def connect_w_mob(recv_data, sock): # from ~ 
     try:    
         send_data = 'Connected'.encode('utf-8')
         sock.send(send_data)
         
-        if(connected_mob[recv_data] == 0):
+        if(connected_mob[recv_data] == 0): #더 많이 일어나는 것을 위로 가는게 좋음  # if 문 안쓰고 해결...? 
             mobile_connect(recv_data, 1)
         else: #connected_mob = 1
             connected_com[recv_data].send(send_data)
@@ -178,17 +183,20 @@ def dist(sock):
             connect_w_pc(sock)
 
         elif(recv_data == 'login'):
-            login_info = json.loads(sock.recv(1024).decode('utf-8'))
-            print(login_info)
+            #원하는 정보인지 확인하는 작업 필요 
+            login_info = json.loads(sock.recv(1024).decode('utf-8')) # login info class를 만들어서 json에서 받은 정보를 서버가 활용할 수 있게 변경해서 들고 다니게 
+                                                                    # id, pw, device type, device id, mac 
+            print(login_info)                                       # 사용자가 준 데이터를 프로그램에서 사용 할 수 있는 데이터로 변경하여 사용 
             login(login_info, sock)
 
         elif(recv_data == 'signup'):
+            #원하는 정보인지 확인하는 작업 필요 
             signup_info = json.loads(sock.recv(1024).decode('utf-8'))  #id, pw, name, email
             print(signup_info)
             try:
                 add_user(signup_info)
             except :
-                sock.send('fail'.encode('utf-8'))
+                sock.send('fail'.encode('utf-8')) # fail 의 종류 구분 필요 
                 continue
             sock.send('ok'.encode('utf-8'))
             print("signup end")
@@ -197,7 +205,12 @@ def dist(sock):
         else : # from mobile, data : password 
             connect_w_mob(recv_data, sock)
 
+#중복 처리 어떻게? duplicated id 검사 
+# return 친절... 해야된다! 
+# log라도 친절하게 찍기 
+
 def add_user(signup_info):
+    ## 여러 실패 케이스르 만들어서 어떤 error를 뿌리는지 확인 
     sql = 'insert user_info(id, pw, name, email) values ("{}", "{}", "{}", "{}");'.format(signup_info["id"], signup_info["pw"], signup_info["name"], signup_info["email"])
     curs.execute(sql)
     curs.fetchall()
@@ -205,8 +218,9 @@ def add_user(signup_info):
 #mysql 5.7.22 
 
 # MySQL Connection 연결
+                                ## db 에러 처리 필요 
 db_conn = pymysql.connect(host='database-1.cgi3kozgpark.ap-northeast-2.rds.amazonaws.com', 
-port = 3306, user='admin', password='puri142857', db='capstone', charset='utf8',autocommit=True)
+port = 3306, user='admin', password='**', db='capstone', charset='utf8',autocommit=True)
 
 # # Connection 으로부터 Cursor 생성
 curs = db_conn.cursor()
@@ -252,3 +266,8 @@ if __name__ == '__main__' :
 
     db_conn.close()
 db_conn.close()
+
+
+#connectino을 관리하는 애가 있고 
+# 상속 받아서 mobile conne
+        #   comput conne
