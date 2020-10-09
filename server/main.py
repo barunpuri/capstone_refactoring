@@ -59,7 +59,8 @@ def receive(connection_id):
                 source_sock.close()
                 break
             target_sock.send(recv_data)
-        except OSError: 
+        except OSError as m:
+            print(m) 
             target_sock.send('disconnected with other device'.encode('utf-8'))
             break
         # os error 말고 다른 error 발생 가능? 
