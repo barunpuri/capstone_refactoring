@@ -20,6 +20,18 @@ import pymysql
 #             exec(s)
 #         except error as m:
 #             print(m)
+class LoginInfo:
+    def __init__(self, login_info):
+        try:
+            self.id = login_info["id"]
+            self.pw = login_info["pw"]
+            self.device_type = "mob" if login_info.get("did",0)==0 else "com"
+            if(self.device_type == "com"):
+                self.did = login_info["did"]
+                self.mac = login_info["mac"]
+            self.valid = True
+        except KeyError:
+            self.valid = False
 
 def disconnect(connection_id):
     lock.acquire()
@@ -92,18 +104,18 @@ def generate_pw(sock, mode):
     return pw
 
 def check_login_info(login_info): #에러 나면 어떻게해? => db 쓰는쪽 다 처리 하기 에러 ! 
-    sql = 'select count(*) from user_info where id = "{}" and pw = "{}";'.format(login_info["id"], login_info["pw"])
+    sql = 'select count(*) from user_info where id = "{}" and pw = "{}";'.format(login_info.id, login_info.pw)
     curs.execute(sql)
     rows = curs.fetchall() # [0][0] 을 붙이고 rows의 이름을 바꾸기 
     return rows[0][0]!=0
 
 def make_device_list(login_info):
-    sql = 'select deviceName from conn_info where id = "{}";'.format(login_info["id"]) # caching.... 되도록 (알아보기)
+    sql = 'select deviceName from conn_info where id = "{}";'.format(login_info.id) # caching.... 되도록 (알아보기)
     curs.execute(sql)
     rows = curs.fetchall()
     conn_list = ''
     for r in rows: 
-        if(connected_dev.get((login_info["id"], r[0]), 0) != 0): #=> 지금 가지고 있는 애들을 주고 살아 있는 애들만 가져와야 함 
+        if(connected_dev.get((login_info.id, r[0]), 0) != 0): #=> 지금 가지고 있는 애들을 주고 살아 있는 애들만 가져와야 함 
             conn_list += r[0] + ','     # db 찾아보면 해결 할수도? 
 
     if(conn_list ==''): # not conn_list 
@@ -112,7 +124,7 @@ def make_device_list(login_info):
     return conn_list
 
 def add_pc(login_info):
-    sql = 'insert conn_info(id, macAddr, DeviceName) values ("{}", "{}", "{}");'.format(login_info["id"], login_info["mac"], login_info["did"])
+    sql = 'insert conn_info(id, macAddr, DeviceName) values ("{}", "{}", "{}");'.format(login_info.id, login_info.mac, login_info.did)
     try:
         curs.execute(sql)
         curs.fetchall()
@@ -127,15 +139,13 @@ def login(login_info, sock):
         return 
 
     response_message = ''
-    #if mobile
-    is_mobile = login_info.get("did", 0) == 0 # device type == mobile? 
-    if(is_mobile):                              #login info.devicetype으로 가져다 쓸수 있도록... 
+    if(login_info.device_type == "mob"):
         response_message = make_device_list(login_info)
         conn = threading.Thread(target=make_connection, args=(sock, ))
         conn.start()
     else:
         add_pc(login_info)
-        connected_dev[login_info["id"], login_info["did"]] = generate_pw(sock, 'conn')
+        connected_dev[login_info.id, login_info.did] = generate_pw(sock, 'conn')
         response_message = 'ok'
 
     sock.send(response_message.encode('utf-8'))
@@ -189,6 +199,11 @@ def dist(sock):
             login_info = json.loads(sock.recv(1024).decode('utf-8')) # login info class를 만들어서 json에서 받은 정보를 서버가 활용할 수 있게 변경해서 들고 다니게 
                                                                     # id, pw, device type, device id, mac 
             print(login_info)                                       # 사용자가 준 데이터를 프로그램에서 사용 할 수 있는 데이터로 변경하여 사용 
+            login_info = LoginInfo(json.loads(sock.recv(1024).decode('utf-8')))
+            if(not login_info.valid):
+                sock.send("invalid data".encode('utf-8'))
+                continue
+            print(login_info, type(login_info))                                       # 사용자가 준 데이터를 프로그램에서 사용 할 수 있는 데이터로 변경하여 사용 
             login(login_info, sock)
 
         elif(recv_data == 'signup'):
