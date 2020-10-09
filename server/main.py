@@ -33,6 +33,16 @@ class LoginInfo:
         except KeyError:
             self.valid = False
 
+class SignupInfo:
+    def __init__(self, signup_info):
+        try:
+            self.id = signup_info["id"]
+            self.pw = signup_info["pw"]
+            self.name = signup_info["name"]
+            self.email = signup_info["email"]
+            self.valid = True
+        except KeyError:
+            self.valid = False
 def disconnect(connection_id):
     lock.acquire()
     del connected_com[connection_id]
@@ -196,9 +206,6 @@ def dist(sock):
 
         elif(recv_data == 'login'):
             #원하는 정보인지 확인하는 작업 필요 
-            login_info = json.loads(sock.recv(1024).decode('utf-8')) # login info class를 만들어서 json에서 받은 정보를 서버가 활용할 수 있게 변경해서 들고 다니게 
-                                                                    # id, pw, device type, device id, mac 
-            print(login_info)                                       # 사용자가 준 데이터를 프로그램에서 사용 할 수 있는 데이터로 변경하여 사용 
             login_info = LoginInfo(json.loads(sock.recv(1024).decode('utf-8')))
             if(not login_info.valid):
                 sock.send("invalid data".encode('utf-8'))
@@ -208,7 +215,10 @@ def dist(sock):
 
         elif(recv_data == 'signup'):
             #원하는 정보인지 확인하는 작업 필요 
-            signup_info = json.loads(sock.recv(1024).decode('utf-8'))  #id, pw, name, email
+            signup_info = SignupInfo(json.loads(sock.recv(1024).decode('utf-8')))  #id, pw, name, email
+            if(not signup_info.valid):
+                sock.send("invalid data".encode('utf-8'))
+                continue
             print(signup_info)
             try:
                 add_user(signup_info)
