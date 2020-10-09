@@ -129,7 +129,7 @@ def make_device_list(login_info):
         if(connected_dev.get((login_info.id, r[0]), 0) != 0): #=> 지금 가지고 있는 애들을 주고 살아 있는 애들만 가져와야 함 
             conn_list += r[0] + ','     # db 찾아보면 해결 할수도? 
 
-    if(conn_list ==''): # not conn_list 
+    if(not conn_list):
         conn_list = 'empty' #mobile에 empty로 전달... => error code(숫자)로 주는것이 바람직 
     
     return conn_list
@@ -199,7 +199,7 @@ def connect_w_mob(recv_data, sock): # from ~
 def dist(sock):
     while True:
         recv_data = sock.recv(1024).decode('utf-8')
-        if(recv_data == ''): break
+        if(not recv_data): break
         print("flag: {}".format(recv_data))
 
         if(recv_data == 'com'): # from com 
