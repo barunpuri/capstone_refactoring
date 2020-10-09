@@ -114,7 +114,7 @@ def generate_pw(sock, mode):
 
     return pw
 
-def check_login_info(login_info): #에러 나면 어떻게해? => db 쓰는쪽 다 처리 하기 에러 ! 
+def can_login(login_info): #에러 나면 어떻게해? => db 쓰는쪽 다 처리 하기 에러 ! 
     sql = 'select count(*) from user_info where id = "{}" and pw = "{}";'.format(login_info.id, login_info.pw)
     curs.execute(sql)
     rows = curs.fetchall() # [0][0] 을 붙이고 rows의 이름을 바꾸기 
@@ -143,9 +143,7 @@ def add_pc(login_info):
         print(m)
 
 def login(login_info, sock):
-    is_exist = check_login_info(login_info) #is_exist 없애고 check_login_info의 이름 바꾸기 
-
-    if(not is_exist): 
+    if(not can_login(login_info)): 
         sock.send('fail'.encode('utf-8'))
         return 
 
