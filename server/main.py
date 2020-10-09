@@ -114,11 +114,11 @@ def generate_pw(sock, mode):
 
     return pw
 
-def can_login(login_info): #에러 나면 어떻게해? => db 쓰는쪽 다 처리 하기 에러 ! 
+def is_login_info(login_info): #에러 나면 어떻게해? => db 쓰는쪽 다 처리 하기 에러 ! 
     sql = 'select count(*) from user_info where id = "{}" and pw = "{}";'.format(login_info.id, login_info.pw)
     curs.execute(sql)
-    rows = curs.fetchall() # [0][0] 을 붙이고 rows의 이름을 바꾸기 
-    return rows[0][0]!=0
+    can_login = curs.fetchall()[0][0]!=0
+    return can_login
 
 def make_device_list(login_info):
     sql = 'select deviceName from conn_info where id = "{}";'.format(login_info.id) # caching.... 되도록 (알아보기)
@@ -143,7 +143,7 @@ def add_pc(login_info):
         print(m)
 
 def login(login_info, sock):
-    if(not can_login(login_info)): 
+    if(not is_login_info(login_info)): 
         sock.send('fail'.encode('utf-8'))
         return 
 
