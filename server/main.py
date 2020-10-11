@@ -172,28 +172,26 @@ def mobile_connect(pw, data): ## data = 0 :init | 1 : touch | sock : conn # 동�
     lock.release()
 
 def connect_from_mob(recv_data, sock): # from ~ 
-    try:    
-        send_data = 'Connected'.encode('utf-8')
-        sock.send(send_data)
-        
-        if(connected_mob[recv_data] == 0): #더 많이 일어나는 것을 위로 가는게 좋음  # if 문 안쓰고 해결...? 
-            mobile_connect(recv_data, 1)
-        else: #connected_mob = 1
+    send_data = 'Connected'.encode('utf-8')
+    sock.send(send_data)
+    try:       
+        if(connected_mob[recv_data] == 1): #더 많이 일어나는 것을 위로 가는게 좋음  # if 문 안쓰고 해결...? 
             connected_com[recv_data].send(send_data)
             mobile_connect(recv_data, sock)
             checking = threading.Thread(target=check_alive, args=(recv_data,))
             checking.start()       
-
+        elif(connected_mob ==0): 
+            mobile_connect(recv_data, 1)
             return "connected_by_pw"
+        else: 
+            send_data = 'Error : Connected Device'
         return ''
     except KeyError:
         send_data = 'Invalid Password'
-        sock.send(send_data.encode('utf-8'))
-
     except OSError: 
         send_data = 'Invalid Password'
-        sock.send(send_data.encode('utf-8'))
         disconnect(recv_data)
+    sock.send(send_data.encode('utf-8'))
     
 def dist(sock):
     while True:
