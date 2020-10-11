@@ -114,15 +114,30 @@ def generate_pw(sock, mode):
 
     return pw
 
-def is_login_info(login_info): #에러 나면 어떻게해? => db 쓰는쪽 다 처리 하기 에러 ! 
+def check_login_info(login_info): #에러 나면 어떻게해? => db 쓰는쪽 다 처리 하기 에러 ! 
     sql = 'select count(*) from user_info where id = "{}" and pw = "{}";'.format(login_info.id, login_info.pw)
-    curs.execute(sql)
+    try:
+        curs.execute(sql)
+    except pymysql.err.InternalError as m : 
+        print("Error: Didsconnected Database\n\t" + m)
+        return False
+    except Exception as m :
+        print("Error: Unexpected Error\n\t" + m)
+        return False
     can_login = curs.fetchall()[0][0]!=0
     return can_login
 
 def make_device_list(login_info):
     sql = 'select deviceName from conn_info where id = "{}";'.format(login_info.id) # caching.... 되도록 (알아보기)
-    curs.execute(sql)
+    try:
+        curs.execute(sql)
+    except pymysql.err.InternalError as m : 
+        print("Error: Didsconnected Database\n\t" + m)
+        return 'fail'
+    except Exception as m :
+        print("Error: Unexpected Error\n\t" + m)
+        return 'fail'
+
     deviceList = curs.fetchall()
     conn_list = ''
     for deviceInfo in deviceList: 
@@ -138,14 +153,35 @@ def make_device_list(login_info):
 def add_pc(login_info):
     sql = 'insert conn_info(id, macAddr, DeviceName) values ("{}", "{}", "{}");'.format(login_info.id, login_info.mac, login_info.did)
     try:
-        curs.execute(sql)
-        curs.fetchall()
-    except Exception as m : 
-        print(m)
+        curs.execute(sql)    
+    except pymysql.err.InternalError as m : 
+        print("Error: Didsconnected Database\n\t" + m)
+        return 
+    except pymysql.err.IntegrityError as m:
+        print("Warning: Duplicated Primary Key\n\t" + m)
+        return 
+    except Exception as m :
+        print("Error: Unexpected Error\n\t" + m)
+        return 
+    curs.fetchall()
+
+#어떤게 더 나은지? 
+    # sql = 'insert conn_info(id, macAddr, DeviceName) values ("{}", "{}", "{}");'.format(login_info.id, login_info.mac, login_info.did)
+    # try:
+    #     curs.execute(sql)    
+    #     curs.fetchall()
+    # except pymysql.err.InternalError as m : 
+    #     print("Error: Didsconnected Database\n\t" + m)
+    # except pymysql.err.IntegrityError as m:
+    #     print("Warning: Duplicated Primary Key\n\t" + m)
+    # except Exception as m :
+    #     print("Error: Unexpected Error\n\t" + m)
+
 
 def login(login_info, sock):
-    if(not is_login_info(login_info)): 
+    if(not check_login_info(login_info)): 
         sock.send('fail'.encode('utf-8'))
+        print("Invalid ID or PASSWORD")
         return 
 
     response_message = ''
@@ -215,15 +251,15 @@ def dist(sock):
             if(not signup_info.valid):
                 sock.send("invalid data".encode('utf-8'))
                 continue
+            
             print(signup_info)
-            try:
-                add_user(signup_info)
-            except :
-                sock.send('fail'.encode('utf-8')) # fail 의 종류 구분 필요 
+            if(add_user(signup_info)=='ok'):
+                sock.send('ok'.encode('utf-8'))
+                print("signup end")
+                break
+            else :
+                sock.send('fail'.encode('utf-8'))
                 continue
-            sock.send('ok'.encode('utf-8'))
-            print("signup end")
-            break
 
         else : # from mobile, data : password 
             phase = connect_from_mob(recv_data, sock)
@@ -238,8 +274,19 @@ def dist(sock):
 def add_user(signup_info):
     ## 여러 실패 케이스르 만들어서 어떤 error를 뿌리는지 확인 
     sql = 'insert user_info(id, pw, name, email) values ("{}", "{}", "{}", "{}");'.format(signup_info["id"], signup_info["pw"], signup_info["name"], signup_info["email"])
-    curs.execute(sql)
+    try:
+        curs.execute(sql)
+    except pymysql.err.InternalError as m : 
+        print("Error: Didsconnected Database\n\t" + m)
+        return 'fail'
+    except pymysql.err.IntegrityError as m:
+        print("Warning: Duplicated Primary Key\n\t" + m)
+        return 'fail'
+    except Exception as m :
+        print("Error: Unexpected Error\n\t" + m)
+        return 'fail'
     curs.fetchall()
+    return 'ok'
     
 #mysql 5.7.22 
 
