@@ -262,8 +262,7 @@ def dist(sock):
                 continue
 
         else : # from mobile, data : password 
-            phase = connect_from_mob(recv_data, sock)
-            if(phase == 'connected_by_pw'):
+            if(connect_from_mob(recv_data, sock) == 'connected_by_pw'):
                 break
 
 #중복 처리 어떻게? duplicated id 검사 
