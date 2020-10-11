@@ -123,11 +123,12 @@ def is_login_info(login_info): #에러 나면 어떻게해? => db 쓰는쪽 다 
 def make_device_list(login_info):
     sql = 'select deviceName from conn_info where id = "{}";'.format(login_info.id) # caching.... 되도록 (알아보기)
     curs.execute(sql)
-    rows = curs.fetchall()
+    deviceList = curs.fetchall()
     conn_list = ''
-    for r in rows: 
-        if(connected_dev.get((login_info.id, r[0]), 0) != 0): #=> 지금 가지고 있는 애들을 주고 살아 있는 애들만 가져와야 함 
-            conn_list += r[0] + ','     # db 찾아보면 해결 할수도? 
+    for deviceInfo in deviceList: 
+        deviceName = deviceInfo[0]
+        if(connected_dev.get((login_info.id, deviceName), 0) != 0): #=> 지금 가지고 있는 애들을 주고 살아 있는 애들만 가져와야 함 
+            conn_list += deviceName + ','     # db 찾아보면 해결 할수도? 
 
     if(not conn_list):
         conn_list = 'empty' #mobile에 empty로 전달... => error code(숫자)로 주는것이 바람직 
@@ -204,16 +205,14 @@ def dist(sock):
             connect_from_pc(sock)
 
         elif(recv_data == 'login'):
-            #원하는 정보인지 확인하는 작업 필요 
             login_info = LoginInfo(json.loads(sock.recv(1024).decode('utf-8')))
             if(not login_info.valid):
                 sock.send("invalid data".encode('utf-8'))
                 continue
-            print(login_info, type(login_info))                                       # 사용자가 준 데이터를 프로그램에서 사용 할 수 있는 데이터로 변경하여 사용 
+            print(login_info, type(login_info))    
             login(login_info, sock)
 
         elif(recv_data == 'signup'):
-            #원하는 정보인지 확인하는 작업 필요 
             signup_info = SignupInfo(json.loads(sock.recv(1024).decode('utf-8')))  #id, pw, name, email
             if(not signup_info.valid):
                 sock.send("invalid data".encode('utf-8'))
