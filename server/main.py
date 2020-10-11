@@ -159,7 +159,7 @@ def login(login_info, sock):
 
     sock.send(response_message.encode('utf-8'))
     
-def connect_w_pc(sock):
+def connect_from_pc(sock):
     pw = generate_pw(sock, 'init')
     sandData = pw.encode('utf-8')
     sock.send(sandData)
@@ -170,7 +170,7 @@ def mobile_connect(pw, data): ## data = 0 :init | 1 : touch | sock : conn # 동�
     connected_mob[pw] = data
     lock.release()
 
-def connect_w_mob(recv_data, sock): # from ~ 
+def connect_from_mob(recv_data, sock): # from ~ 
     try:    
         send_data = 'Connected'.encode('utf-8')
         sock.send(send_data)
@@ -201,7 +201,7 @@ def dist(sock):
         print("flag: {}".format(recv_data))
 
         if(recv_data == 'com'): # from com 
-            connect_w_pc(sock)
+            connect_from_pc(sock)
 
         elif(recv_data == 'login'):
             #원하는 정보인지 확인하는 작업 필요 
@@ -229,7 +229,7 @@ def dist(sock):
             break
 
         else : # from mobile, data : password 
-            phase = connect_w_mob(recv_data, sock)
+            phase = connect_from_mob(recv_data, sock)
             if(phase == 'connected_by_pw'):
                 break
 
