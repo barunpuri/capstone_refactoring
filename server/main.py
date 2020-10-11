@@ -175,7 +175,7 @@ def connect_from_mob(recv_data, sock): # from ~
     send_data = 'Connected'.encode('utf-8')
     sock.send(send_data)
     try:       
-        if(connected_mob[recv_data] == 1): #더 많이 일어나는 것을 위로 가는게 좋음  # if 문 안쓰고 해결...? 
+        if(connected_mob[recv_data] == 1): 
             connected_com[recv_data].send(send_data)
             mobile_connect(recv_data, sock)
             checking = threading.Thread(target=check_alive, args=(recv_data,))
