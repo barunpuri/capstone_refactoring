@@ -21,28 +21,31 @@ import pymysql
 #         except error as m:
 #             print(m)
 class LoginInfo:
-    def __init__(self, login_info):
+    def __init__(self, login_info): ##init 함수가 얼마나 초기화를 해야하는가 
         try:
             self.id = login_info["id"]
             self.pw = login_info["pw"]
             self.device_type = "mob" if login_info.get("did",0)==0 else "com"
             if(self.device_type == "com"):
-                self.did = login_info["did"]
-                self.mac = login_info["mac"]
-            self.valid = True
+                self.did = login_info["did"] # 선언되지 않은 부분에 접근하려고 하면 프로그램 종료가 될 것 같다
+                self.mac = login_info["mac"] # 확인해보기 
+            self.valid = True # valid하다를 기본으로 setting하고 문제가 생기는 순간에만 false로 처리 -> 위로 옮기기 
+                            # True False보다는 keyerror를 throw 해서 호출하는데서 처리하는게 일반적
+                            # => init 이 잘 됐다는 의미이기 때문에 throw가 더 적절
         except KeyError:
             self.valid = False
 
 class SignupInfo:
     def __init__(self, signup_info):
         try:
-            self.id = signup_info["id"]
-            self.pw = signup_info["pw"]
+            self.id = signup_info["id"] # id pw 중복 (log in , sign up) 
+            self.pw = signup_info["pw"] # user info 로 바꿧 login, sign
             self.name = signup_info["name"]
             self.email = signup_info["email"]
             self.valid = True
         except KeyError:
             self.valid = False
+
 def disconnect(connection_id):
     lock.acquire()
     del connected_com[connection_id]
@@ -114,7 +117,7 @@ def generate_pw(sock, mode):
 
     return pw
 
-def check_login_info(login_info): #에러 나면 어떻게해? => db 쓰는쪽 다 처리 하기 에러 ! 
+def check_login_info(login_info): 
     sql = 'select count(*) from user_info where id = "{}" and pw = "{}";'.format(login_info.id, login_info.pw)
     try:
         curs.execute(sql)
@@ -176,6 +179,13 @@ def add_pc(login_info):
     #     print("Warning: Duplicated Primary Key\n\t" + m)
     # except Exception as m :
     #     print("Error: Unexpected Error\n\t" + m)
+
+    # 넣는것을 선호 
+    # java 쪽 -> try -catch 즐겨 쓰는 쪽 -> 쓸데없는 코드까지 넣지 않는것
+    # 일장 일단 
+    # 안에 넣으면 가독성 
+    # 간단한 코드라면 별 차이가 없는데
+    
 
 
 def login(login_info, sock):
@@ -251,7 +261,7 @@ def dist(sock):
             if(not signup_info.valid):
                 sock.send("invalid data".encode('utf-8'))
                 continue
-            
+
             print(signup_info)
             if(add_user(signup_info)=='ok'):
                 sock.send('ok'.encode('utf-8'))
@@ -271,7 +281,6 @@ def dist(sock):
 
 
 def add_user(signup_info):
-    ## 여러 실패 케이스르 만들어서 어떤 error를 뿌리는지 확인 
     sql = 'insert user_info(id, pw, name, email) values ("{}", "{}", "{}", "{}");'.format(signup_info["id"], signup_info["pw"], signup_info["name"], signup_info["email"])
     try:
         curs.execute(sql)
