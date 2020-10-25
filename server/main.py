@@ -94,7 +94,13 @@ def make_connection(sock):
         recv_data = sock.recv(1024).decode('utf-8')
         conn_info = json.loads(recv_data)
 
-        pw = connected_dev[conn_info["id"], conn_info["did"]]
+        try:
+            pw = connected_dev[conn_info["id"]][conn_info["did"]]
+        except KeyError:
+            print("Invalid data")
+            sock.send("fail".encode('utf-8'))
+            return
+
         sock.send(pw.encode('utf-8'))
     except OSError as m:  
         print(m)
@@ -150,9 +156,7 @@ def make_device_list(login_info):
     conn_list = ''
     for deviceInfo in deviceList: 
         deviceName = deviceInfo[0]
-        print(deviceName)
-        conn_list += deviceName + ','     # db 찾아보면 해결 할수도? 
-    print(conn_list)
+        conn_list += deviceName + ','    
     if(not conn_list):
         conn_list = 'empty' # mobile에 empty로 전달... => error code(숫자)로 주는것이 바람직 
     
@@ -187,7 +191,11 @@ def login(login_info, sock):
         conn.start()
     else:
         add_pc(login_info)
-        connected_dev[login_info.id, login_info.did] = generate_pw(sock, 'conn')
+        if(login_info.id in connected_dev):
+            connected_dev[login_info.id][login_info.did] = generate_pw(sock, 'conn')
+        else:
+            connected_dev[login_info.id] = dict()
+            connected_dev[login_info.id][login_info.did] = generate_pw(sock, 'conn')
         response_message = 'ok'
 
     sock.send(response_message.encode('utf-8'))
