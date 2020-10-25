@@ -28,7 +28,7 @@ class UserInfo:
 
 class LoginInfo(UserInfo):
     def __init__(self, login_info):
-        super.__init__(login_info)
+        super().__init__(login_info)
         self.device_type = "mob" if login_info.get("did",0)==0 else "com"
         self.did = ''
         self.mac = ''
@@ -38,7 +38,7 @@ class LoginInfo(UserInfo):
 
 class SignupInfo(UserInfo):
     def __init__(self, signup_info):
-        super.__init__(signup_info)
+        super().__init__(signup_info)
         self.name = signup_info["name"]
         self.email = signup_info["email"]
 
@@ -118,32 +118,41 @@ def check_login_info(login_info):
     try:
         curs.execute(sql)
     except pymysql.err.InternalError as m : 
-        print("Error: Didsconnected Database\n\t" + m)
+        print("Error: Didsconnected Database")
+        print(m)
         return False
     except Exception as m :
-        print("Error: Unexpected Error\n\t" + m)
+        print("Error: Unexpected Error")
+        print(m)
         return False
     can_login = curs.fetchall()[0][0]!=0
     return can_login
 
 def make_device_list(login_info):
-    sql = 'select deviceName from conn_info where id = "{}";'.format(login_info.id) # caching.... 되도록 (알아보기)
+    device_list = ''
+    for device in connected_dev[login_info.id]:
+        device_list += '"'+device + '", '
+    device_list = device_list[:-2]
+    sql = 'select deviceName from conn_info where id = "{}" and deviceName in ({});'.format(login_info.id, device_list) # caching.... 되도록 (알아보기) # 모르겠...
+
     try:
         curs.execute(sql)
     except pymysql.err.InternalError as m : 
-        print("Error: Didsconnected Database\n\t" + m)
+        print("Error: Didsconnected Database")
+        print(m)
         return 'fail'
     except Exception as m :
-        print("Error: Unexpected Error\n\t" + m)
+        print("Error: Unexpected Error")
+        print(m)
         return 'fail'
 
     deviceList = curs.fetchall()
     conn_list = ''
     for deviceInfo in deviceList: 
         deviceName = deviceInfo[0]
-        if(connected_dev.get((login_info.id, deviceName), 0) != 0): #=> 지금 가지고 있는 애들을 주고 살아 있는 애들만 가져와야 함 
-            conn_list += deviceName + ','     # db 찾아보면 해결 할수도? 
-
+        print(deviceName)
+        conn_list += deviceName + ','     # db 찾아보면 해결 할수도? 
+    print(conn_list)
     if(not conn_list):
         conn_list = 'empty' # mobile에 empty로 전달... => error code(숫자)로 주는것이 바람직 
     
@@ -155,11 +164,14 @@ def add_pc(login_info):
         curs.execute(sql)    
         curs.fetchall()
     except pymysql.err.InternalError as m : 
-        print("Error: Didsconnected Database\n\t" + m)
+        print("Error: Didsconnected Database")
+        print(m)
     except pymysql.err.IntegrityError as m:
-        print("Warning: Duplicated Primary Key\n\t" + m)
+        print("Warning: Duplicated Primary Key")
+        print(m)
     except Exception as m :
-        print("Error: Unexpected Error\n\t" + m)    
+        print("Error: Unexpected Error")    
+        print(m)
 
 
 def login(login_info, sock):
@@ -261,13 +273,16 @@ def add_user(signup_info):
     try:
         curs.execute(sql)
     except pymysql.err.InternalError as m : 
-        print("Error: Didsconnected Database\n\t" + m)
+        print("Error: Didsconnected Database")
+        print(m)
         return 'fail'
     except pymysql.err.IntegrityError as m:
-        print("Warning: Duplicated Primary Key\n\t" + m)
+        print("Warning: Duplicated Primary Key")
+        print(m)
         return 'fail'
     except Exception as m :
-        print("Error: Unexpected Error\n\t" + m)
+        print("Error: Unexpected Error")
+        print(m)
         return 'fail'
     curs.fetchall()
     return 'ok'
