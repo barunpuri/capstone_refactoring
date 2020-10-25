@@ -20,31 +20,27 @@ import pymysql
 #             exec(s)
 #         except error as m:
 #             print(m)
-class LoginInfo:
-    def __init__(self, login_info): ##init 함수가 얼마나 초기화를 해야하는가 
-        try:
-            self.id = login_info["id"]
-            self.pw = login_info["pw"]
-            self.device_type = "mob" if login_info.get("did",0)==0 else "com"
-            if(self.device_type == "com"):
-                self.did = login_info["did"] # 선언되지 않은 부분에 접근하려고 하면 프로그램 종료가 될 것 같다
-                self.mac = login_info["mac"] # 확인해보기 
-            self.valid = True # valid하다를 기본으로 setting하고 문제가 생기는 순간에만 false로 처리 -> 위로 옮기기 
-                            # True False보다는 keyerror를 throw 해서 호출하는데서 처리하는게 일반적
-                            # => init 이 잘 됐다는 의미이기 때문에 throw가 더 적절
-        except KeyError:
-            self.valid = False
+class UserInfo:
+    def __init__(self, user_info):
+        self.id = user_info["id"]
+        self.pw = user_info["pw"]
 
-class SignupInfo:
+
+class LoginInfo(UserInfo):
+    def __init__(self, login_info):
+        super.__init__(login_info)
+        self.device_type = "mob" if login_info.get("did",0)==0 else "com"
+        self.did = ''
+        self.mac = ''
+        if(self.device_type == "com"):
+            self.did = login_info["did"] 
+            self.mac = login_info["mac"]
+
+class SignupInfo(UserInfo):
     def __init__(self, signup_info):
-        try:
-            self.id = signup_info["id"] # id pw 중복 (log in , sign up) 
-            self.pw = signup_info["pw"] # user info 로 바꿧 login, sign
-            self.name = signup_info["name"]
-            self.email = signup_info["email"]
-            self.valid = True
-        except KeyError:
-            self.valid = False
+        super.__init__(signup_info)
+        self.name = signup_info["name"]
+        self.email = signup_info["email"]
 
 def disconnect(connection_id):
     lock.acquire()
@@ -57,7 +53,7 @@ def receive(connection_id):
     target_sock = connected_com[connection_id]
     while True:
         try: 
-            recv_data = source_sock.recv(1024)#check source alive
+            recv_data = source_sock.recv(1024) # check source alive
             if (not recv_data):    
                 source_sock.close()
                 break
@@ -90,7 +86,7 @@ def check_alive(connection_id):
             disconnect(connection_id)
             target_sock.close() ## target이 없을떄 문제가 안생기나? 
             source_sock.send('disconnected with other device'.encode('utf-8'))
-            source_sock.close() ##reconnect? exti?
+            source_sock.close() ## reconnect? exti?
             break
 
 def make_connection(sock):
@@ -106,7 +102,7 @@ def make_connection(sock):
 def generate_pw(sock, mode):
     conn_mode = {'init':0, 'conn':1}
     pw = f'0000'
-    is_pw_exist = connected_com.get(pw,0) != 0 # exist : not 0 | not exist : 0
+    is_pw_exist = connected_com.get(pw,0) != 0      # exist : not 0 | not exist : 0
     lock.acquire()
     while(is_pw_exist):
         pw = f'{random.randrange(1, 10**4):04}'
@@ -149,7 +145,7 @@ def make_device_list(login_info):
             conn_list += deviceName + ','     # db 찾아보면 해결 할수도? 
 
     if(not conn_list):
-        conn_list = 'empty' #mobile에 empty로 전달... => error code(숫자)로 주는것이 바람직 
+        conn_list = 'empty' # mobile에 empty로 전달... => error code(숫자)로 주는것이 바람직 
     
     return conn_list
 
@@ -157,35 +153,13 @@ def add_pc(login_info):
     sql = 'insert conn_info(id, macAddr, DeviceName) values ("{}", "{}", "{}");'.format(login_info.id, login_info.mac, login_info.did)
     try:
         curs.execute(sql)    
+        curs.fetchall()
     except pymysql.err.InternalError as m : 
         print("Error: Didsconnected Database\n\t" + m)
-        return 
     except pymysql.err.IntegrityError as m:
         print("Warning: Duplicated Primary Key\n\t" + m)
-        return 
     except Exception as m :
-        print("Error: Unexpected Error\n\t" + m)
-        return 
-    curs.fetchall()
-
-#어떤게 더 나은지? 
-    # sql = 'insert conn_info(id, macAddr, DeviceName) values ("{}", "{}", "{}");'.format(login_info.id, login_info.mac, login_info.did)
-    # try:
-    #     curs.execute(sql)    
-    #     curs.fetchall()
-    # except pymysql.err.InternalError as m : 
-    #     print("Error: Didsconnected Database\n\t" + m)
-    # except pymysql.err.IntegrityError as m:
-    #     print("Warning: Duplicated Primary Key\n\t" + m)
-    # except Exception as m :
-    #     print("Error: Unexpected Error\n\t" + m)
-
-    # 넣는것을 선호 
-    # java 쪽 -> try -catch 즐겨 쓰는 쪽 -> 쓸데없는 코드까지 넣지 않는것
-    # 일장 일단 
-    # 안에 넣으면 가독성 
-    # 간단한 코드라면 별 차이가 없는데
-    
+        print("Error: Unexpected Error\n\t" + m)    
 
 
 def login(login_info, sock):
@@ -249,16 +223,18 @@ def dist(sock):
             connect_from_pc(sock)
 
         elif(recv_data == 'login'):
-            login_info = LoginInfo(json.loads(sock.recv(1024).decode('utf-8')))
-            if(not login_info.valid):
+            try:
+                login_info = LoginInfo(json.loads(sock.recv(1024).decode('utf-8')))
+            except KeyError:
                 sock.send("invalid data".encode('utf-8'))
                 continue
             print(login_info, type(login_info))    
             login(login_info, sock)
 
         elif(recv_data == 'signup'):
-            signup_info = SignupInfo(json.loads(sock.recv(1024).decode('utf-8')))  #id, pw, name, email
-            if(not signup_info.valid):
+            try:
+                signup_info = SignupInfo(json.loads(sock.recv(1024).decode('utf-8')))  #id, pw, name, email
+            except KeyError:
                 sock.send("invalid data".encode('utf-8'))
                 continue
 
