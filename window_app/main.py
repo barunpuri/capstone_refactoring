@@ -31,6 +31,34 @@ import uuid
 # 
 
 
+
+class UserInfo:
+    def __init__(self):
+        self.id = None
+        self.pw = None
+    
+    def toJson(self):
+        return '{"id":"%s", "pw":"%s"}' %(self.id, self.pw)
+
+
+class LoginInfo(UserInfo):
+    def __init__(self):
+        super().__init__()
+        self.did = None
+        self.mac = None
+
+    def toJson(self):
+        return '{"id":"%s", "pw":"%s", "did":"%s", "mac":"%s"}' %(self.id, self.pw, self.did, self.mac)
+
+class SignupInfo(UserInfo):
+    def __init__(self):
+        super().__init__()
+        self.name = None
+        self.email = None
+
+    def toJson(self):
+        return '{"id":"%s", "pw":"%s", "name":"%s", "email":"%s"}' %(self.id, self.pw, self.name, self.email)
+
 def make_popup_image(mode):
     SIZE = 250
     root = Tk()
@@ -235,12 +263,12 @@ class LoginForm(QtWidgets.QDialog):
     @pyqtSlot()
     def send_login_info(self):
         sock = make_connection('login') 
-        login_info = dict() # server -> login info class 가져가 쓰기 => 공통 구조로 쓸 수 있으면 따로 python파일로 빼기  # 데이터 구조는 같고 행동이 다르면 상속 구조로 쓰는것도 방법 
-        login_info["id"] = self.ui.id_box.text()
-        login_info["pw"] = self.ui.pw_box.text()
-        login_info["did"] = gethostname()
-        login_info["mac"] = ':'.join(['{:02x}'.format((uuid.getnode() >> ele) & 0xff) for ele in range(0,8*6,8)][::-1])
-        sock.send(json.dumps(login_info).encode('utf-8'))
+        login_info = LoginInfo()
+        login_info.id =self.ui.id_box.text()
+        login_info.pw = self.ui.pw_box.text()
+        login_info.did = gethostname()
+        login_info.mac = ':'.join(['{:02x}'.format((uuid.getnode() >> ele) & 0xff) for ele in range(0,8*6,8)][::-1])
+        sock.send(login_info.toJson().encode('utf-8'))
         recvData = sock.recv(1024).decode('utf-8')
         print(recvData)
         if(recvData == 'ok'): 
@@ -300,12 +328,12 @@ class SignUpForm(QtWidgets.QDialog):
             self.ui.result.setText("비밀번호가 다릅니다.")
             return 
         
-        signup_info = dict() # server -> signup class 
-        signup_info["id"] = self.ui.id_box.text()
-        signup_info["pw"] = self.ui.pw_box.text()
-        signup_info["name"] = self.ui.name_box.text()
-        signup_info["email"] = self.ui.email_box.text()
-        sock.send(json.dumps(signup_info).encode('utf-8'))
+        signup_info = SignupInfo() 
+        signup_info.id = self.ui.id_box.text()
+        signup_info.pw = self.ui.pw_box.text()
+        signup_info.name = self.ui.name_box.text()
+        signup_info.email = self.ui.email_box.text()
+        sock.send(signup_info.toJson().encode('utf-8'))
 
         recvData = sock.recv(1024).decode('utf-8')
         if(recvData == 'ok'):
@@ -331,6 +359,8 @@ class SystemTrayIcon(QtWidgets.QSystemTrayIcon):
         exitAction.triggered.connect(app.quit)
         
         self.setContextMenu(menu)
+
+
 
 #fixed size = 365 305        
 if __name__ == '__main__':
