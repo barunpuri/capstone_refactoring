@@ -25,7 +25,7 @@
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
-  <widget class="QLabel" name="pw_label_2">
+  <widget class="QLabel" name="pw_label">
    <property name="geometry">
     <rect>
      <x>30</x>
@@ -78,7 +78,7 @@ background-color: rgb(255, 255, 255);</string>
     <string>인증 번호 생성</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="pushButton_3">
+  <widget class="QPushButton" name="login_btn">
    <property name="geometry">
     <rect>
      <x>115</x>
@@ -91,7 +91,7 @@ background-color: rgb(255, 255, 255);</string>
     <string>로그인</string>
    </property>
   </widget>
-  <widget class="QLabel" name="status">
+  <widget class="QLabel" name="status_label">
    <property name="geometry">
     <rect>
      <x>30</x>
@@ -110,7 +110,7 @@ background-color: rgb(255, 255, 255);</string>
  </widget>
  <tabstops>
   <tabstop>generate_num_btn</tabstop>
-  <tabstop>pushButton_3</tabstop>
+  <tabstop>login_btn</tabstop>
   <tabstop>how_to_btn</tabstop>
  </tabstops>
  <resources/>
@@ -148,7 +148,7 @@ background-color: rgb(255, 255, 255);</string>
    </hints>
   </connection>
   <connection>
-   <sender>pushButton_3</sender>
+   <sender>login_btn</sender>
    <signal>clicked()</signal>
    <receiver>Dialog</receiver>
    <slot>login()</slot>

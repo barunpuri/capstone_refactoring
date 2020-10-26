@@ -50,7 +50,7 @@
     <bool>false</bool>
    </property>
   </widget>
-  <widget class="QPushButton" name="pushButton_3">
+  <widget class="QPushButton" name="go_back_btn">
    <property name="geometry">
     <rect>
      <x>115</x>
@@ -91,7 +91,7 @@
     <string extracomment="pwpw"/>
    </property>
   </widget>
-  <widget class="QLabel" name="label_7">
+  <widget class="QLabel" name="id_label">
    <property name="geometry">
     <rect>
      <x>45</x>
@@ -104,7 +104,7 @@
     <string>ID : </string>
    </property>
   </widget>
-  <widget class="QLabel" name="label_8">
+  <widget class="QLabel" name="pw_label">
    <property name="geometry">
     <rect>
      <x>45</x>
@@ -136,7 +136,7 @@
     <string extracomment="id"/>
    </property>
   </widget>
-  <widget class="QLabel" name="label_9">
+  <widget class="QLabel" name="name_label">
    <property name="geometry">
     <rect>
      <x>45</x>
@@ -196,7 +196,7 @@
     <string extracomment="test@mail.com"/>
    </property>
   </widget>
-  <widget class="QLabel" name="label_10">
+  <widget class="QLabel" name="email_label">
    <property name="geometry">
     <rect>
      <x>45</x>
@@ -209,7 +209,7 @@
     <string>EMAIL : </string>
    </property>
   </widget>
-  <widget class="QLabel" name="label_11">
+  <widget class="QLabel" name="pw_check_label">
    <property name="geometry">
     <rect>
      <x>45</x>
@@ -250,7 +250,7 @@
     <string extracomment="pwpw"/>
    </property>
   </widget>
-  <widget class="QLabel" name="label_12">
+  <widget class="QLabel" name="pw_condition_label">
    <property name="geometry">
     <rect>
      <x>260</x>
@@ -311,7 +311,7 @@
   <tabstop>name_box</tabstop>
   <tabstop>email_box</tabstop>
   <tabstop>sign_in_btn</tabstop>
-  <tabstop>pushButton_3</tabstop>
+  <tabstop>go_back_btn</tabstop>
  </tabstops>
  <resources/>
  <connections>
@@ -332,7 +332,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>pushButton_3</sender>
+   <sender>go_back_btn</sender>
    <signal>clicked()</signal>
    <receiver>Dialog</receiver>
    <slot>go_login()</slot>
