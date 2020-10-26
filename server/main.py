@@ -48,7 +48,7 @@ def disconnect(connection_id):
     del connected_mob[connection_id]
     lock.release()
 
-def receive(connection_id):
+def deliver_message(connection_id):
     source_sock = connected_mob[connection_id]
     target_sock = connected_com[connection_id]
     while True:
@@ -62,6 +62,10 @@ def receive(connection_id):
             print(m) 
             target_sock.send('disconnected with other device'.encode('utf-8'))
             break
+        except error as m:
+            print("Unknown Error")
+            print(m)
+            break
         # os error 말고 다른 error 발생 가능? 
         # 있으면 남기기 
         # oserror -> 아는 error 는 warning
@@ -69,10 +73,11 @@ def receive(connection_id):
         #except 의 종류, 메세지 신경써서 남기기 
 
 def check_alive(connection_id):
+    msg_deliverer = threading.Thread(target=deliver_message, args=(connection_id, ), daemon=True)
+    msg_deliverer.start()
+    
     source_sock = connected_mob[connection_id]
     target_sock = connected_com[connection_id]
-    receiver = threading.Thread(target=receive, args=(connection_id, ), daemon=True)
-    receiver.start()
 
     while(True):
         try : 
@@ -206,7 +211,7 @@ def connect_from_pc(sock):
     sock.send(sandData)
     return
 
-def mobile_connect(pw, data): ## data = 0 :init | 1 : touch | sock : conn # 동사로 시작 
+def regist_mobile(pw, data): ## data = 0 :init | 1 : touch | sock : conn 
     lock.acquire()
     connected_mob[pw] = data
     lock.release()
@@ -217,11 +222,11 @@ def connect_from_mob(recv_data, sock): # from ~
     try:       
         if(connected_mob[recv_data] == 1): 
             connected_com[recv_data].send(send_data)
-            mobile_connect(recv_data, sock)
-            checking = threading.Thread(target=check_alive, args=(recv_data,))
-            checking.start()       
-        elif(connected_mob ==0): 
-            mobile_connect(recv_data, 1)
+            regist_mobile(recv_data, sock)
+            alive_checker = threading.Thread(target=check_alive, args=(recv_data,))
+            alive_checker.start()       
+        elif(connected_mob[recv_data] ==0): 
+            regist_mobile(recv_data, 1)
             return "connected_by_pw"
         else: 
             send_data = 'Error : Connected Device'
@@ -233,7 +238,7 @@ def connect_from_mob(recv_data, sock): # from ~
         disconnect(recv_data)
     sock.send(send_data.encode('utf-8'))
     
-def dist(sock):
+def dist_connection_type(sock):
     while True:
         recv_data = sock.recv(1024).decode('utf-8')
         if(not recv_data): break
@@ -342,8 +347,8 @@ if __name__ == '__main__' :
         print(connected_com)
         connectionSock, addr = serverSock.accept()
         print(str(addr), 'connected.')
-        disting = threading.Thread(target=dist, args=(connectionSock, ))
-        disting.start()
+        conn_distinguisher = threading.Thread(target=dist_connection_type, args=(connectionSock, ))
+        conn_distinguisher.start()
 
     db_conn.close()
 db_conn.close()
