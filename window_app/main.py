@@ -16,6 +16,7 @@ from tkinter import *
 from PIL import Image, ImageTk
 import json
 import uuid
+import enum
 
 # pyqt / java 초창기 ui 문제 => drag n drop 으로 하기가 불편
 # 보통 학생 -> ui -> pyqt 
@@ -78,36 +79,38 @@ def make_popup_image(mode):
     root.after(1000, lambda: root.destroy())
     root.mainloop()
 
+class Mode(enum.Enum):
+    CLICK = '0'
+    LEFT = '1'
+    RIGHT = '2'
+    LOCK = '3'
+    UNLOCK = '4'
+
 def point_on_screen(recvData):
     try:
         mode, x_ratio, y_ratio = recvData.split(',')
-        # mode 0 = click, 1 = left, 2 = right, 3 = lock, 4 = unlock 
 
         point_x = WIDTH * float(x_ratio) #ratio 범위 check 
         point_y = HEIGHT * float(y_ratio)
 
         print("좌표 : {}, {}".format(point_x,point_y) )
-        mode = int(mode)
-        if(mode == 0):# enum으로 바꾸기 
+        if(mode == Mode.CLICK.value):
             pyautogui.click(x=point_x, y=point_y)
-        elif( mode == 1):
+        elif(mode == Mode.LEFT.value):
             pyautogui.press('left')
-        elif( mode == 2):
+        elif(mode == Mode.RIGHT.value):
             pyautogui.press('right')
-        elif( mode == 3): # 
+        elif(mode == Mode.LOCK.value): 
             pass 
-        elif( mode == 4):
+        elif(mode == Mode.UNLOCK.value):
             pass
 
         p = threading.Thread(target = make_popup_image, args=(int(mode),), daemon=True )
         p.start()
 
-    except: # -> except 처리 value error -> 위치 옮기기
-        # recv data 찍기 # logging 
-        p = threading.Thread(target = make_popup_image, args=(int(recvData),), daemon=True )
-        p.start()
-        pass # pass.. 삭제! 
-        # 완성된 상태에서 발생할 경우가 없다면 삭제..! 
+    except ValueError as m:
+        print(recvData)
+        print(m)
 
 def make_connection(id): # request ...같은 이름으로 바꾸기 
     port = 8081
@@ -169,16 +172,16 @@ def connectionStart(sock, QDialog): # thread로 만든 이유 -> 일반 함수�
     while True: # connection단계에서는 ui를 못쓰게 하는게 맞는거 같다 
         recvData = sock.recv(1024).decode('utf-8')
         if( recvData == 'Connected' ):
-            QDialog.ui.status.setText('연결되었습니다')
-            QDialog.ui.pw_label_2.setText('')
+            QDialog.ui.status_label.setText('연결되었습니다')
+            QDialog.ui.pw_label.setText('')
             print(recvData)
             break
 
     res = pointing_start(sock) #이거만 thread를 빼는거도 나을거 같다 
 
     if( res == 'disconnected with other device'):
-        QDialog.ui.status.setText('연결이 종료되었습니다. \n다시 연결하려면 번호를 다시 생성해 주세요')
-        QDialog.ui.pw_label_2.setText('')
+        QDialog.ui.status_label.setText('연결이 종료되었습니다. \n다시 연결하려면 번호를 다시 생성해 주세요')
+        QDialog.ui.pw_label.setText('')
     
 def notify():
     if( platform.system() == 'Windows' and platform.release() == '10'):
@@ -190,7 +193,7 @@ class MainForm(QtWidgets.QDialog):
         self.closed = 0
         QtWidgets.QDialog.__init__(self, parent)
         self.setWindowFlag(QtCore.Qt.WindowContextHelpButtonHint, False)
-        self.ui = uic.loadUi("tos_v1.ui", self) #tos.ui
+        self.ui = uic.loadUi("basic.ui", self) #tos.ui
         self.setFixedSize(self.frameGeometry().width(), self.frameGeometry().height())
         self.ui.setWindowTitle('Touch On Screen')
         self.setWindowIcon(QtGui.QIcon(MAIN_ICON))
@@ -213,8 +216,8 @@ class MainForm(QtWidgets.QDialog):
 
         pw, sock = make_connection('pw')
         #화면에 pw 보여주기 gui
-        self.ui.pw_label_2.setText(pw) #이름 바꾸기! 
-        self.ui.status.setText('연결할 장비에 아래 비밀번호를 입력하세요.')
+        self.ui.pw_label.setText(pw) 
+        self.ui.status_label.setText('연결할 장비에 아래 비밀번호를 입력하세요.')
         
         waiting = threading.Thread(target=connectionStart, args=(sock,self))
         waiting.start()
@@ -274,9 +277,9 @@ class LoginForm(QtWidgets.QDialog):
         if(recvData == 'ok'): 
             main_window.move(self.x(), self.y())
             self.hide()
-            main_window.ui.pushButton_3.setEnabled(False)
-            main_window.ui.status.setText("연결을 기다리고 있습니다.")
-            main_window.ui.pw_label_2.setText("")
+            main_window.ui.login_btn.setEnabled(False)
+            main_window.ui.status_label.setText("연결을 기다리고 있습니다.")
+            main_window.ui.pw_label.setText("")
             waiting = threading.Thread(target=connectionStart, args=(sock,main_window))
             waiting.start()
             main_window.show()
