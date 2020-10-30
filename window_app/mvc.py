@@ -192,7 +192,8 @@ class MainForm(QtWidgets.QDialog):
     how_to_clicked = pyqtSignal()
     login_clicked = pyqtSignal()
     main_closed = pyqtSignal()
-    restore_event = pyqtSignal(QtWidgets.QSystemTrayIcon.Event)
+    show_normal = pyqtSignal()
+    restore_event = pyqtSignal(QtWidgets.QSystemTrayIcon.ActivationReason)
     def __init__(self, parent=None):
         self.closed = 0
         QtWidgets.QDialog.__init__(self, parent)
@@ -203,7 +204,7 @@ class MainForm(QtWidgets.QDialog):
         self.setWindowIcon(QtGui.QIcon(MAIN_ICON))
         
     def showNormal(self):
-        trayIcon.hide()
+        self.show_normal.emit()
         self.show()
     
     def keyPressEvent(self, event): 
@@ -232,7 +233,7 @@ class MainForm(QtWidgets.QDialog):
         
 
     def restore(self, reason):
-        self.restore_event.emit()
+        self.restore_event.emit(reason)
         
     
     def show_pw(self, pw):
@@ -240,6 +241,11 @@ class MainForm(QtWidgets.QDialog):
         self.ui.status_label.setText('연결할 장비에 아래 비밀번호를 입력하세요.')
 
 class LoginForm(QtWidgets.QDialog):
+    login_closed = pyqtSignal()
+    login = pyqtSignal()
+    make_account_clicked = pyqtSignal()
+    go_main_clicked = pyqtSignal()
+
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
         self.setWindowFlag(QtCore.Qt.WindowContextHelpButtonHint, False)
@@ -249,49 +255,38 @@ class LoginForm(QtWidgets.QDialog):
         self.setWindowIcon(QtGui.QIcon(MAIN_ICON))
 
     def closeEvent(self, QCloseEvent):
-        main_window.closeEvent(QCloseEvent)
-        self.__init__()
+        self.login_closed.emit()
 
     def keyPressEvent(self, event):
         pass
 
     @pyqtSlot()
     def send_login_info(self):
-        sock = make_connection('login') 
+        self.login.emit()        
+
+    def get_login_info(self):
         login_info = LoginInfo()
         login_info.id =self.ui.id_box.text()
         login_info.pw = self.ui.pw_box.text()
         login_info.did = gethostname()
         login_info.mac = ':'.join(['{:02x}'.format((uuid.getnode() >> ele) & 0xff) for ele in range(0,8*6,8)][::-1])
-        sock.send(login_info.toJson().encode('utf-8'))
-        recvData = sock.recv(1024).decode('utf-8')
-        print(recvData)
-        if(recvData == 'ok'): 
-            main_window.move(self.x(), self.y())
-            self.hide()
-            main_window.ui.login_btn.setEnabled(False)
-            main_window.ui.status_label.setText("연결을 기다리고 있습니다.")
-            main_window.ui.pw_label.setText("")
-            waiting = threading.Thread(target=connectionStart, args=(sock,main_window))
-            waiting.start()
-            main_window.show()
-        else:
-            self.ui.result.setText("올바르지 않은 ID, PW 입니다.")
-            
+        return login_info
+
     @pyqtSlot()
     def make_account(self):
-        signup_window.move(self.x(), self.y())
-        self.hide()
-        signup_window.show()
+        self.make_account_clicked.emit()
+        
 
     @pyqtSlot()
     def go_main(self):
-        main_window.move(self.x(), self.y())
-        self.hide()
-        main_window.show()
+        self.go_main_clicked.emit()
         self.__init__()
         
 class SignUpForm(QtWidgets.QDialog):
+    signup_closed = pyqtSignal()
+    go_login_clicked = pyqtSignal()
+    signup = pyqtSignal()
+
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
         self.setWindowFlag(QtCore.Qt.WindowContextHelpButtonHint, False)
@@ -301,50 +296,40 @@ class SignUpForm(QtWidgets.QDialog):
         self.setWindowIcon(QtGui.QIcon(MAIN_ICON))
 
     def closeEvent(self, QCloseEvent):
-        main_window.closeEvent(QCloseEvent)
-        self.__init__()
+        self.signup_closed.emit()
 
     def keyPressEvent(self, event):
         pass
 
     @pyqtSlot()
     def go_login(self):
-        login_window.move(self.x(), self.y())
-        self.hide()
-        login_window.show()
+        self.go_login_clicked.emit()
 
     @pyqtSlot()
     def signup_confirm(self):
         if(self.ui.id_box.text() == '' or self.ui.pw_box.text() == '' or self.ui.name_box.text() == '' or self.ui.email_box.text() == ''):
             self.ui.result.setText("id를 입력해주세요")
             return
-        sock = make_connection('signup')
         if(self.ui.pw_box.text() != self.ui.pw_check_box.text()):
             self.ui.result.setText("비밀번호가 다릅니다.")
-            return 
-        
+            return
+
+        self.signup.emit()
+    
+    def get_signup_info(self):
         signup_info = SignupInfo() 
         signup_info.id = self.ui.id_box.text()
         signup_info.pw = self.ui.pw_box.text()
         signup_info.name = self.ui.name_box.text()
         signup_info.email = self.ui.email_box.text()
-        sock.send(signup_info.toJson().encode('utf-8'))
+        return signup_info
 
-        recvData = sock.recv(1024).decode('utf-8')
-        if(recvData == 'ok'):
-            main_window.move(self.x(), self.y())
-            self.hide()
-            login_window.show()
-            self.__init__()
-        else:
-            self.ui.result.setText("이미 존재하는 ID 입니다.")
-            
 class SystemTrayIcon(QtWidgets.QSystemTrayIcon):
 
     def __init__(self, icon, parent=None):
         QtWidgets.QSystemTrayIcon.__init__(self, icon, parent)
         print(parent)
-        self.activated.connect(main_window.restore)
+        self.activated.connect(parent.restore)
         menu = QtWidgets.QMenu(parent)
 
         openAction = menu.addAction("Open")
@@ -376,6 +361,16 @@ class Controller():
         self.main_window.login_clicked.connect(self.login_clicked)
         self.main_window.main_closed.connect(self.close)
         self.main_window.restore_event.connect(self.restore)
+        self.main_window.show_normal.connect(self.show_normal)
+
+        self.login_window.login_closed.connect(self.close)
+        self.login_window.login.connect(self.login)
+        self.login_window.make_account_clicked.connect(self.make_account_clicked)
+        self.login_window.go_main_clicked.connect(self.go_main_clicked)
+
+        self.signup_window.signup_closed.connect(self.close)
+        self.signup_window.go_login_clicked.connect(self.go_login_clicked)
+        self.signup_window.signup.connect(self.signup)
 
     def gen_pw(self):
         pw, sock = make_connection('pw')
@@ -413,6 +408,46 @@ class Controller():
             # self.showNormal will restore the window even if it was
             # minimized.
             self.main_window.show()
+    
+    def show_normal(self):
+        self.trayIcon.hide()
+
+    def login(self):
+        sock = make_connection('login')
+        login_info = self.login_window.get_login_info()
+        sock.send(login_info.toJson().encode('utf-8'))
+        recvData = sock.recv(1024).decode('utf-8')
+        print(recvData)
+        if(recvData == 'ok'): 
+            self.main_window.ui.login_btn.setEnabled(False)
+            self.main_window.ui.status_label.setText("연결을 기다리고 있습니다.")
+            self.main_window.ui.pw_label.setText("")
+            self.waiting = threading.Thread(target=connectionStart, args=(sock, self.main_window))
+            self.waiting.start()
+            self.change_window(self.login_window, self.main_window)
+        else:
+            self.login_window.ui.result.setText("올바르지 않은 ID, PW 입니다.")
+    
+    def make_account_clicked(self):
+        self.change_window(self.login_window, self.signup_window)
+    
+    def go_main_clicked(self):
+        self.change_window(self.login_window, self.main_window)
+
+    def go_login_clicked(self):
+        self.change_window(self.signup_window, self.login_window)
+    
+    def signup(self):
+        sock = make_connection('signup')
+        signup_info = self.signup_window.get_signup_info() 
+        sock.send(signup_info.toJson().encode('utf-8'))
+        recvData = sock.recv(1024).decode('utf-8')
+        if(recvData == 'ok'):
+            self.change_window(self.signup_window, self.login_window)
+            self.signup_window.__init__()
+        else:
+            self.signup_window.ui.result.setText("이미 존재하는 ID 입니다.")
+
 
 #fixed size = 365 305        
 if __name__ == '__main__':
