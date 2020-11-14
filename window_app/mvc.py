@@ -30,6 +30,32 @@ import uuid
         # ->에러를 일관적으로 처리 
 # 
 
+'''
+사용자의 요구사항의 변동이 많을때
+ui로직을 분리하면
+쓰면 좋을때
+    ui를 건드리고 controller를 안건드려도 될수 있음
+    test를 하고싶을떄 
+        -> uitest , control test
+    
+쓰면 안될때 
+    model이 안정화가 안되어있을때 
+
+controller도 기능별로 하나
+model별로 하나
+view별로 하나 
+=> 파일 분리 
+
+사용자와 interaction ->view로
+ui에서 controller생성해서 사용 
+controller를 분리해서 하는것도 좋을것 같다
+
+src / 
+    -window
+    -model
+    -view 
+'''
+
 
 
 class UserInfo:
@@ -194,6 +220,7 @@ class MainForm(QtWidgets.QDialog):
     main_closed = pyqtSignal()
     show_normal = pyqtSignal()
     restore_event = pyqtSignal(QtWidgets.QSystemTrayIcon.ActivationReason)
+
     def __init__(self, parent=None):
         self.closed = 0
         QtWidgets.QDialog.__init__(self, parent)
@@ -345,8 +372,8 @@ class SystemTrayIcon(QtWidgets.QSystemTrayIcon):
 class Controller():
     def __init__(self):
         self.closed = 0
-        self.main_window = MainForm()
-        self.main_window.show()
+        self.main_window = MainForm()   # ui객체를 가지는것은 부담스러움     --> ui에서 controller를 붙여서 써야한다....
+        self.main_window.show()         ## controller에서는 호출에대한 피드백으로 ui로 데이터 전송 
         self.login_window = LoginForm()
         self.login_window.hide()
         self.signup_window = SignUpForm()
@@ -376,7 +403,7 @@ class Controller():
         pw, sock = make_connection('pw')
         #화면에 pw 보여주기 gui
         
-        self.main_window.show_pw(pw)
+        self.main_window.show_pw(pw)### self.main_window.를 달고 다녀야 하나?
         
         waiting = threading.Thread(target=connectionStart, args=(sock,self))
         waiting.start()
@@ -387,16 +414,16 @@ class Controller():
     def login_clicked(self):
         self.change_window(self.main_window, self.login_window)
 
-    def change_window(self, cur_window, next_window):
+    def change_window(self, cur_window, next_window): # 사용자가 눈에 보이는거를 controller에서 조정 ->이러면 안됨 => view에서 처리 
         next_window.move(cur_window.x(), cur_window.y())
         cur_window.hide()
         next_window.show()
 
     def close(self):
         print("WindowCLoseEvent")
-        self.login_window.__init__()
-        self.signup_window.__init__()
-        self.trayIcon.show()
+        self.login_window.__init__() ##생성자 는 바람직하지 않음 
+        self.signup_window.__init__() ## --> init을 할때는 ui객체 생성 ->
+        self.trayIcon.show()            ## clear하는 함수 생성해서 init에서도 하고 호출도 
         if( self.closed == 0 ):
             noti = threading.Thread(target=notify)
             noti.start()
