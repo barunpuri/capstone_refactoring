@@ -60,6 +60,8 @@ class SignupInfo(UserInfo):
     def toJson(self):
         return '{"id":"%s", "pw":"%s", "name":"%s", "email":"%s"}' %(self.id, self.pw, self.name, self.email)
 
+
+
 def make_popup_image(mode):
     SIZE = 250
     root = Tk()
@@ -192,11 +194,15 @@ class MainForm(QtWidgets.QDialog):
     def __init__(self, parent=None):
         self.closed = 0
         QtWidgets.QDialog.__init__(self, parent)
+        self.clear()
         self.setWindowFlag(QtCore.Qt.WindowContextHelpButtonHint, False)
-        self.ui = uic.loadUi("basic.ui", self) #tos.ui
         self.setFixedSize(self.frameGeometry().width(), self.frameGeometry().height())
         self.ui.setWindowTitle('Touch On Screen')
         self.setWindowIcon(QtGui.QIcon(MAIN_ICON))
+
+    def clear(self):
+        self.ui = uic.loadUi("basic.ui", self) #tos.ui
+        
         
     def showNormal(self):
         trayIcon.hide()
@@ -250,15 +256,18 @@ class MainForm(QtWidgets.QDialog):
 class LoginForm(QtWidgets.QDialog):
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
+        self.clear()
         self.setWindowFlag(QtCore.Qt.WindowContextHelpButtonHint, False)
-        self.ui = uic.loadUi("login.ui", self) 
         self.setFixedSize(self.frameGeometry().width(), self.frameGeometry().height())
         self.ui.setWindowTitle('Touch On Screen')
         self.setWindowIcon(QtGui.QIcon(MAIN_ICON))
 
+    def clear(self):
+        self.ui = uic.loadUi("login.ui", self) 
+
     def closeEvent(self, QCloseEvent):
         main_window.closeEvent(QCloseEvent)
-        self.__init__()
+        self.clear()
 
     def keyPressEvent(self, event):
         pass
@@ -297,20 +306,23 @@ class LoginForm(QtWidgets.QDialog):
         main_window.move(self.x(), self.y())
         self.hide()
         main_window.show()
-        self.__init__()
+        self.clear()
         
 class SignUpForm(QtWidgets.QDialog):
     def __init__(self, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
+        self.clear()
         self.setWindowFlag(QtCore.Qt.WindowContextHelpButtonHint, False)
-        self.ui = uic.loadUi("signup.ui", self) 
         self.setFixedSize(self.frameGeometry().width(), self.frameGeometry().height())
         self.ui.setWindowTitle('Touch On Screen')
         self.setWindowIcon(QtGui.QIcon(MAIN_ICON))
 
+    def clear(self):
+        self.ui = uic.loadUi("signup.ui", self) 
+
     def closeEvent(self, QCloseEvent):
         main_window.closeEvent(QCloseEvent)
-        self.__init__()
+        self.clear()
 
     def keyPressEvent(self, event):
         pass
@@ -343,12 +355,11 @@ class SignUpForm(QtWidgets.QDialog):
             main_window.move(self.x(), self.y())
             self.hide()
             login_window.show()
-            self.__init__()
+            self.clear()
         else:
             self.ui.result.setText("이미 존재하는 ID 입니다.")
             
 class SystemTrayIcon(QtWidgets.QSystemTrayIcon):
-
     def __init__(self, icon, parent=None):
         QtWidgets.QSystemTrayIcon.__init__(self, icon, parent)
         print(parent)
