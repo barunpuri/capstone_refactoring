@@ -50,8 +50,8 @@ class SignUpForm(QtWidgets.QDialog):
         
         recvData = controller.send_signup_info(self.ui.id_box.text(), self.ui.pw_box.text(), self.ui.name_box.text(), self.ui.email_box.text())
 
-        if(recvData == 'ok'):
-            self.signal.login.emit(self.x(), self.y())
+        if(recvData == 'ok'):                           # 일어나는 case 추가 
+            self.signal.login.emit(self.x(), self.y())  #
             self.hide()
             self.clear()
         else:

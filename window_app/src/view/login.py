@@ -25,11 +25,15 @@ class LoginForm(QtWidgets.QDialog):
         self.hide()
 
     def clear(self):
-        self.ui = uic.loadUi("./../ui/login.ui", self) 
+        self.ui = uic.loadUi("./../ui/login.ui", self)  # ui load 대신 
+                                                        # id pw ..이런거 삭제 
+                                                        # 
 
-    def closeEvent(self, QCloseEvent):
-        self.signal.close.emit(QCloseEvent)
-        self.clear()
+    def closeEvent(self, QCloseEvent):          # main의 close 와 연결 .... 
+        self.signal.close.emit(QCloseEvent)     # 보통 ui가 
+        self.clear()                            # ui 재사용 -> 갖고있는 정보를 유지해야 하는 경우
+                                                # 기존의 instance 를 파괴..
+                                                # -> 새 생성
 
     def keyPressEvent(self, event):
         pass
