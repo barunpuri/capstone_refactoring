@@ -9,12 +9,17 @@ import sys
 sys.path.append("./controller")
 if __name__ == '__main__':
     sys.path.append("./../controller")
-import controller
+import signup_controller as controller
+
+from configparser import ConfigParser
+
+parser = ConfigParser()
+parser.read('config.ini')
 
 class SignUpForm(QtWidgets.QDialog):
     def __init__(self, signal, parent=None, MAIN_ICON = "./../img/Logo.png"):
         QtWidgets.QDialog.__init__(self, parent)
-        self.clear()
+        self.ui = uic.loadUi("./../ui/signup.ui", self) 
         self.setWindowFlag(QtCore.Qt.WindowContextHelpButtonHint, False)
         self.setFixedSize(self.frameGeometry().width(), self.frameGeometry().height())
         self.ui.setWindowTitle('Touch On Screen')
@@ -24,7 +29,11 @@ class SignUpForm(QtWidgets.QDialog):
         self.hide()
 
     def clear(self):
-        self.ui = uic.loadUi("./../ui/signup.ui", self) 
+        self.ui.id_box.setText("")
+        self.ui.pw_box.setText("")
+        self.ui.name_box.setText("")
+        self.ui.email_box.setText("")
+        self.ui.result.setText("")
 
     def closeEvent(self, QCloseEvent):
         self.signal.close.emit(QCloseEvent)
@@ -43,17 +52,17 @@ class SignUpForm(QtWidgets.QDialog):
         if(self.ui.id_box.text() == '' or self.ui.pw_box.text() == '' or self.ui.name_box.text() == '' or self.ui.email_box.text() == ''):
             self.ui.result.setText("id를 입력해주세요")
             return
-        sock = controller.make_connection('signup')
+        sock = controller.make_connection()
         if(self.ui.pw_box.text() != self.ui.pw_check_box.text()):
             self.ui.result.setText("비밀번호가 다릅니다.")
             return 
         
         recvData = controller.send_signup_info(self.ui.id_box.text(), self.ui.pw_box.text(), self.ui.name_box.text(), self.ui.email_box.text())
 
-        if(recvData == 'ok'):                           # 일어나는 case 추가 
+        if(recvData == parser.get('reserved', 'ok')):   # 일어나는 case 추가 
             self.signal.login.emit(self.x(), self.y())  #
-            self.hide()
             self.clear()
+            self.hide()
         else:
             self.ui.result.setText("이미 존재하는 ID 입니다.")
   

@@ -13,14 +13,18 @@ from systray import SystemTrayIcon
 sys.path.append("./controller")
 if __name__ == '__main__':
     sys.path.append("./../controller")
-import controller
+import basic_controller as controller
 
+from configparser import ConfigParser
+
+parser = ConfigParser()
+parser.read('config.ini')
 
 class MainForm(QtWidgets.QDialog):
     def __init__(self, signal, parent=None, MAIN_ICON = "./../img/Logo.png"):
-        self.closed = 0
+        self.hasNotied = False
         QtWidgets.QDialog.__init__(self, parent)
-        self.clear()
+        self.ui = uic.loadUi("./../ui/basic.ui", self)
         self.setWindowFlag(QtCore.Qt.WindowContextHelpButtonHint, False)
         self.setFixedSize(self.frameGeometry().width(), self.frameGeometry().height())
         self.ui.setWindowTitle('Touch On Screen')
@@ -31,24 +35,28 @@ class MainForm(QtWidgets.QDialog):
         self.signal.close.connect(self.closeEvent)
         self.signal.basic.connect(self.move_n_show)
         self.signal.loggined.connect(self.loggined)
+        self.signal.disconnected.connect(self.disconnected)
         self.show()
         # self.ui.pw_label.setText('1234') 
 
     def clear(self):
-        self.ui = uic.loadUi("./../ui/basic.ui", self) #tos.ui
+        self.ui.pw_label.setText("")
+        self.ui.status_label.setText("")
         
     def showNormal(self):
         # trayIcon.hide()
         self.show()
     
-    def keyPressEvent(self, event):     # 테스트 해보고 필요 없으면 지워도 될거
-        pass                            # pass : 코드의 틀을 잡을때 error 가 없도록
-                                        #       고려해봤을때 뭐 없을때 
-                                        # return과 pass의 느낌이 다름 
-                                        # 의미상으로는 return 
-                                        # return 이 더 명확 한 것 같음
-                                        # keyPress Event를 막은 이유 설명 필요 ##주석으로 
-
+    def keyPressEvent(self, event):   
+        # block key press event "esc" 
+        # if not exist -> hide window
+        return                          
+        # pass : 코드의 틀을 잡을때 error 가 없도록
+        #       고려해봤을때 뭐 없을때 
+        # return과 pass의 느낌이 다름 
+        # 의미상으로는 return 
+        # return 이 더 명확 한 것 같음
+                                        
     # Did the user press the Escape key?
     #if event.key() == QtCore.Qt.Key_Escape: # QtCore.Qt.Key_Escape is a value that equates to what the operating system passes to python from the keyboard when the escape key is pressed.
         # Yes: Close the window
@@ -57,7 +65,7 @@ class MainForm(QtWidgets.QDialog):
 
     @pyqtSlot()
     def generate_num(self): # btn 
-        sock, pw = controller.make_connection('pw') # 문자열을 쓰는것을 자제해서 미리 선언해두고 사용 필요 
+        sock, pw = controller.make_connection()
         #화면에 pw 보여주기 gui
         self.ui.pw_label.setText(pw) 
         self.ui.status_label.setText('연결할 장비에 아래 비밀번호를 입력하세요.')
@@ -67,14 +75,15 @@ class MainForm(QtWidgets.QDialog):
 
     def wait_mobile(self, sock):
         recvData = controller.connectionStart(sock)
-        if( recvData == 'Connected'):       # text 만 달라 -> if 문 안에서 내용만 처리 -> 3항 연산자 처리 가능 
-            self.ui.status_label.setText('연결되었습니다')
-            self.ui.pw_label.setText('')
+        result_text = ''
+        if( recvData == 'Connected'):  
+            result_text = '연결되었습니다'
         else:
-            self.ui.status_label.setText('ERROR')
-            self.ui.pw_label.setText('')
-
-        controller.handling_start(sock)
+            result_text = 'ERROR'
+            
+        self.ui.status_label.setText(result_text)
+        self.ui.pw_label.setText('')
+        controller.handling_start(sock, self.signal)
 
 
     @pyqtSlot()
@@ -84,21 +93,17 @@ class MainForm(QtWidgets.QDialog):
 
     @pyqtSlot()
     def login(self): #btn
-        self.hide()     # 숨기는 것을 가장 마지막에 
-        self.signal.login.emit(self.x(), self.y()) # 
-        # login_window.move(self.x(), self.y())
-        # login_window.show()
+        self.signal.login.emit(self.x(), self.y()) 
+        self.hide()
 
-    def closeEvent(self, QCloseEvent): ## 지금은 이게 close event -> hide처럼 처리지만 
-        print("WindowCLoseEvent")       # 나중에 누가 이해할거냐.....
+    # 닫기 버튼 -> closeEvent
+    def closeEvent(self, QCloseEvent): 
+        print("WindowCLoseEvent")      
         self.signal.tray.emit()
-        if( self.closed == 0 ):         # 최초 닫기에만 noti => true, false
-            controller.notify()         # notied = false -> true면 안함 
-                                        # flag 변수 별로 안 좋아함..
-                                        # 일반적으로 conf 파일에 알람을 어떻게 처리할지 저장되어 있음
-            # noti = threading.Thread(target=notify)
-            # noti.start()
-        self.closed += 1
+        if( not self.hasNotied ):       
+            controller.notify()          
+            # 일반적으로 conf 파일에 알람을 어떻게 처리할지 저장되어 있음
+        self.hasNotied = True
 
     def restore(self):
         self.show()
@@ -114,6 +119,10 @@ class MainForm(QtWidgets.QDialog):
         
         connecting = threading.Thread(target=self.wait_mobile, args=(sock))
         connecting.start()
+    
+    def disconnected(self):
+        self.ui.status_label.setText('연결이 종료되었습니다. \n다시 연결하려면 번호를 다시 생성해 주세요')
+        self.ui.pw_label.setText('')
         
 
 if __name__ == '__main__':
